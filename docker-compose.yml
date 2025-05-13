@@ -5,3 +5,11 @@ services:
       - "3000:3000"
     environment:
       - PORT=3000
+      - REDIS_URL=redis://cache:6379
+    depends_on:
+      - cache
+
+  cache:
+    image: redis:latest
+    ports:
+      - "6379:6379"
