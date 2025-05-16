@@ -2,19 +2,22 @@ services:
   api:
     build: .
     ports:
-      - "3000:3000"
+      - "${PORT}:3000"
     environment:
-      - PORT=3000
+      - PORT=${PORT}
       - REDIS_URL= ${REDIS_URL}
       - DATABASE_URL= ${DATABASE_URL}
     depends_on:
-      - cache
-      - db
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_started
 
   cache:
     image: redis:latest
     ports:
       - "6379:6379"
+    command: redis-server --maxmemory 10mb --maxmemory-policy allkeys-lru
   
   db:
     image: postgres:latest
@@ -22,6 +25,11 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     ports:
       - "${DB_PORT}:5432"
     volumes:
