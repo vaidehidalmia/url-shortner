@@ -30,12 +30,23 @@ sequelize.sync();
 
 app.post('/urls', async (req, res) => {
     try {
-        const { url } = req.body;
+        const { url, customAlias } = req.body;
         if (!url) {
           return res.status(400).json({ error: 'URL is required' });
         }
-    
-        const shortId = shortid.generate();
+
+        let shortId;
+        if (customAlias) {
+            // check if customAlias is already taken
+            const temp = await Urls.findByPk(customAlias);
+            if (temp) {
+                return res.status(409).json({ error: 'Custom alias is already in use'});
+            }
+            shortId = customAlias;
+        } else {
+            shortId = shortid.generate();
+        }
+        console.log(shortId);
     
         await Urls.create({ shortId, originalUrl: url });
         await redisClient.set(shortId, url);
@@ -75,16 +86,6 @@ app.get('/:shortId', async (req, res) => {
 
 app.get('/', (req, res) => {
     res.send('Welcome to Url Shortner');
-});
-
-app.get('/cache', async (req, res) => {
-    await client.set('test_key', 'Redis is working!');
-    const message = await client.get('test_key');
-    res.send(message);
-});
-
-app.get('/db', (req, res) => {
-    res.send('Connected to PostgreSQL successfully!');
 });
 
 app.listen(PORT, () => console.log(`Server running at http://localhost:${PORT}`));
